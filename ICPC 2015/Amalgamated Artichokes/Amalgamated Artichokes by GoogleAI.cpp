@@ -56,6 +56,11 @@ int main() {
 
         // Imprime el formato exacto del ICPC y limpia el búfer de pantalla con endl
         cout << fixed << setprecision(12) << max_decline << endl;
+
+    } else{
+
+        cout << "Error en la lectura de datos";
+
     }
 
     return 0;
