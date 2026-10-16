@@ -2,7 +2,7 @@
 
 Solucion al Problema F Keyboarding by: GoogleAI
 
-Paradigma: 
+Paradigma: Busqueda de anchura
 
 Comentarios by: Calak de Astora
 
