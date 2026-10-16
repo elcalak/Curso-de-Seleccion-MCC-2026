@@ -63,6 +63,86 @@ Para aplicarlo al problema de manera directa según la porción que queda abajo:
 
 Se implemento en C++ por optimizacion y velocidad
 
+## Pseudo Codigo:
+
+```
+ALGORITMO CuttingCheese
+ENTRADA:
+    n: Número de esferas
+    s: Número de rebanadas deseadas
+    esferas: Lista de estructuras con (radio, x, y, z)
+
+// 1. Convertir datos a milímetros para trabajar en un rango cómodo de 0 a 100
+PARA CADA esfera EN esferas:
+    esfera.radio = esfera.radio / 1000
+    esfera.x = esfera.x / 1000
+    esfera.y = esfera.y / 1000
+    esfera.z = esfera.z / 1000
+
+// 2. Calcular volúmenes base
+volumen_total_queso = CHEESE_VOLUME_BELOW(100.0, esferas)
+volumen_rebanada_objetivo = volumen_total_queso / s
+
+previous_z = 0.0
+
+// 3. Encontrar la posición de cada uno de los cortes
+PARA i DESDE 1 HASTA s:
+    volumen_acumulado_requerido = i * volumen_rebanada_objetivo
+    
+    // Búsqueda binaria sobre el eje Z
+    low = previous_z
+    high = 100.0
+    
+    REPETIR 60 VECES:
+        mid = low + (high - low) / 2
+        
+        SI CHEESE_VOLUME_BELOW(mid, esferas) < volumen_acumulado_requerido ENTONCES:
+            low = mid   // Falta queso, el corte debe ser más arriba
+        SINO:
+            high = mid  // Sobra queso o es exacto, el corte puede ser más abajo
+    
+    current_z = low
+    
+    // El grosor de la rebanada actual es la distancia con el corte previo
+    IMPRIMIR (current_z - previous_z)
+    
+    previous_z = current_z // Actualizar la base para la siguiente rebanada
+
+FIN ALGORITMO
+
+
+// ====================================================================
+// FUNCIÓN AUXILIAR: Calcula volumen neto de queso hasta una altura Z
+// ====================================================================
+FUNCIÓN CHEESE_VOLUME_BELOW(z, esferas):
+    volumen_prisma_bruto = 100.0 * 100.0 * z
+    volumen_aire_total = 0.0
+    
+    PARA CADA esfera EN esferas:
+        volumen_aire_total = volumen_aire_total + AIR_VOLUME_BELOW(esfera, z)
+        
+    REGRESAR (volumen_prisma_bruto - volumen_aire_total)
+
+
+// ====================================================================
+// FUNCIÓN AUXILIAR: Calcula el aire de una esfera por debajo de Z
+// ====================================================================
+FUNCIÓN AIR_VOLUME_BELOW(esfera, z):
+    // Caso 1: La esfera está completamente arriba del plano z
+    SI (esfera.z - esfera.radio) >= z ENTONCES:
+        REGRESAR 0.0
+        
+    // Caso 2: La esfera está completamente abajo del plano z
+    SI (esfera.z + esfera.radio) <= z ENTONCES:
+        REGRESAR (4.0 / 3.0) * PI * (esfera.radio^3)
+        
+    // Caso 3: El plano z corta la esfera de forma transversal
+    altura_casquete = z - (esfera.z - esfera.radio)
+    volumen_casquete = (1.0 / 3.0) * PI * (altura_casquete^2) * (3.0 * esfera.radio - altura_casquete)
+    
+    REGRESAR volumen_casquete
+```
+
 ## 2.1. Inclusion de librerias y Definiciones globales:
 
 ```C++

@@ -43,6 +43,113 @@ Al terminar la fusión, te quedará una lista ordenada de bloques de tiempo bloq
 
 # 2. Implementacion:
 
+## Pseudo Codigo:
+
+```
+ALGORITMO ShipTrafficMaxWindow
+ENTRADA:
+    n : Entero (Número de carriles)
+    w : Real (Ancho de cada carril)
+    u : Real (Velocidad de los barcos)
+    v : Real (Velocidad del ferry)
+    t1, t2 : Real (Ventana global de tiempo permitida)
+
+ESTRUCTURA Intervalo:
+    l : Real (Tiempo de inicio)
+    r : Real (Tiempo de fin)
+
+INICIO
+    // Bucle para procesar múltiples casos de prueba mientras existan datos
+    MIENTRAS haya datos de entrada para (n, w, u, v, t1, t2) HACER:
+        
+        Crear Lista vacía de Intervalos: intervalos_bloqueados
+
+        // FASE 1: PROCESAMIENTO CINEMÁTICO DE LOS BARCOS
+        PARA i DESDE 0 HASTA n - 1 HACER:
+            Leer dir (Dirección: 'E' o 'W')
+            Leer m (Número de barcos en este carril)
+
+            // Tiempos absolutos en los que el ferry entra y sale físicamente del carril i
+            t_entra_carril ← (i * w) / v
+            t_sale_carril ← ((i + 1) * w) / v
+
+            PARA j DESDE 0 HASTA m - 1 HACER:
+                Leer longitud, pos
+
+                // Calcular ventana absoluta [t_entrada, t_salida] donde el barco invade X = 0
+                SI dir == 'E' ENTONCES
+                    t_entrada ← -pos / u
+                    t_salida  ← (longitud - pos) / u
+                SINO // dir == 'W'
+                    t_entrada ← pos / u
+                    t_salida  ← (pos + longitud) / u
+                FIN_SI
+
+                // Proyectar la restricción al tiempo de salida en el origen (t_s) del ferry
+                l ← t_entrada - t_sale_carril
+                r ← t_salida - t_entra_carril
+
+                // Acotar estrictamente dentro del rango global [t1, t2]
+                l ← MAX(l, t1)
+                r ← MIN(r, t2)
+
+                // Si hay una superposición real de peligro, se registra el intervalo
+                SI l < r - 1e-9 ENTONCES
+                    Añadir Intervalo(l, r) a intervalos_bloqueados
+                FIN_SI
+            FIN_PARA
+        FIN_PARA
+
+        // CASO BORDE: Si no hay bloqueos, toda la ventana está libre
+        SI intervalos_bloqueados está vacía ENTONCES
+            IMPRIMIR (t2 - t1)
+            CONTINUAR con el siguiente caso de prueba
+        FIN_SI
+
+        // FASE 2: ORDENAMIENTO CRONOLÓGICO
+        ORDENAR intervalos_bloqueados de menor a mayor usando:
+            - Primero por el inicio (l)
+            - En caso de empate, por el fin (r)
+
+        // FASE 3: FUSIÓN DE INTERVALOS (ALGORITMO DE BARRIDO / SWEEP-LINE)
+        Crear Lista vacía de Intervalos: intervalos_fusionados
+        Añadir intervalos_bloqueados[0] a intervalos_fusionados
+
+        PARA i DESDE 1 HASTA LONGITUD(intervalos_bloqueados) - 1 HACER:
+            ultimo_bloque ← Obtener el último elemento de intervalos_fusionados
+            bloque_actual ← intervalos_bloqueados[i]
+
+            // Si se solapan o son adyacentes, se expande el bloque
+            SI bloque_actual.l <= ultimo_bloque.r + 1e-9 ENTONCES
+                ultimo_bloque.r ← MAX(ultimo_bloque.r, bloque_actual.r)
+            SINO
+                // Si hay espacio libre, se agrega como un nuevo bloqueo separado
+                Añadir bloque_actual a intervalos_fusionados
+            FIN_SI
+        FIN_PARA
+
+        // FASE 4: EVALUACIÓN DE LAS BRECHAS LIBRES (GAPS)
+        max_brecha ← 0.0
+
+        // Brecha 1: Desde t1 hasta el inicio del primer bloque prohibido
+        max_brecha ← MAX(max_brecha, intervalos_fusionados[0].l - t1)
+
+        // Brechas intermedias: Entre bloques prohibidos consecutivos
+        PARA i DESDE 1 HASTA LONGITUD(intervalos_fusionados) - 1 HACER:
+            brecha_actual ← intervalos_fusionados[i].l - intervalos_fusionados[i-1].r
+            max_brecha ← MAX(max_brecha, brecha_actual)
+        FIN_PARA
+
+        // Brecha final: Desde el término del último bloque prohibido hasta t2
+        ultimo_bloque ← Obtener el último elemento de intervalos_fusionados
+        max_brecha ← MAX(max_brecha, t2 - ultimo_bloque.r)
+
+        // SALIDA
+        IMPRIMIR max_brecha (con precisión decimal alta)
+
+    FIN_MIENTRAS
+FIN
+```
 
 ## 2.1. Cabeceras y Estructura Base (Configuración)
 

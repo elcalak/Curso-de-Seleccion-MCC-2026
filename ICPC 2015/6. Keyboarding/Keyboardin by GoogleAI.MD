@@ -45,6 +45,102 @@ La solución: Antes de empezar el BFS, calcula a dónde te lleva presionar cada 
 
 # 2. Implementacion:
 
+## Pseudo Codigo:
+
+```
+Estructura Posicion:
+    fila, columna
+
+Estructura Estado:
+    fila, columna, indice_texto, distancia
+
+Constantes de Dirección:
+    dr = [-1, 1, 0, 0]  // Arriba, Abajo, Izquierda, Derecha
+    dc = [0, 0, -1, 1]
+
+Función Principal():
+    Leer R, C (Dimensiones del teclado)
+    Leer matriz teclado[R][C]
+    Leer texto_objetivo
+    Agregar '*' al final de texto_objetivo
+    Longitud_Texto = longitud(texto_objetivo)
+
+    // FASE 1: PRECOMPUTACIÓN DE MOVIMIENTOS
+    Crear matriz next_pos[R][C][4] de tipo Posicion
+
+    Para r desde 0 hasta R - 1:
+        Para c desde 0 hasta C - 1:
+            Para d desde 0 hasta 3:
+                nr = r
+                nc = c
+                encontro_diferente = Falso
+                
+                Mientras Verdadero:
+                    siguiente_r = nr + dr[d]
+                    siguiente_c = nc + dc[d]
+                    
+                    // Si se sale de los bordes del teclado, se detiene
+                    Si siguiente_r < 0 o siguiente_r >= R o siguiente_c < 0 o siguiente_c >= C:
+                        Romper Mientras
+                    
+                    nr = siguiente_r
+                    nc = siguiente_c
+                    
+                    // Si el carácter cambia, encontramos el destino
+                    Si teclado[nr][nc] != teclado[r][c]:
+                        encontro_diferente = Verdadero
+                        Romper Mientras
+                
+                // Regla del borde: Si no cambió de letra, el cursor no se mueve
+                Si encontro_diferente:
+                    next_pos[r][c][d] = Posicion(nr, nc)
+                Sino:
+                    next_pos[r][c][d] = Posicion(r, c)
+
+    // FASE 2: INICIALIZACIÓN DEL BFS
+    Crear matriz dist[R][C][Longitud_Texto + 1] inicializada en -1
+    Crear cola de tipo Estado Q
+
+    Insertar Estado(fila=0, columna=0, indice_texto=0, distancia=0) en Q
+    dist[0][0][0] = 0
+
+    // FASE 3: BÚSQUEDA EN ANCHURA (BFS)
+    Mientras Q no esté vacía:
+        actual = Sacar de Q
+
+        // Condición de Victoria (Primer estado en completar todo el texto)
+        Si actual.indice_texto == Longitud_Texto:
+            Imprimir actual.distancia
+            Terminar Programa
+
+        // Poda por si el estado ya fue optimizado por un camino más corto
+        Si actual.distancia > dist[actual.fila][actual.columna][actual.indice_texto]:
+            Continuar al siguiente ciclo
+
+        // ACCIÓN A: Pulsar el botón Seleccionar (si coincide con la letra que buscamos)
+        Si teclado[actual.fila][actual.columna] == texto_objetivo[actual.indice_texto]:
+            nuevo_idx = actual.indice_texto + 1
+            nueva_dist = actual.distancia + 1
+            
+            Si dist[actual.fila][actual.columna][nuevo_idx] == -1 o nueva_dist < dist[actual.fila][actual.columna][nuevo_idx]:
+                dist[actual.fila][actual.columna][nuevo_idx] = nueva_dist
+                Insertar Estado(actual.fila, actual.columna, nuevo_idx, nueva_dist) en Q
+
+        // ACCIÓN B: Moverse en las 4 direcciones con las flechas
+        Para d desde 0 hasta 3:
+            destino = next_pos[actual.fila][actual.columna][d]
+            
+            // Si el cursor se quedó quieto por rebotar contra el borde, se ignora
+            Si destino.fila == actual.fila y destino.columna == actual.columna:
+                Continuar al siguiente d
+
+            nueva_dist = actual.distancia + 1
+
+            Si dist[destino.fila][destino.columna][actual.indice_texto] == -1 o nueva_dist < dist[destino.fila][destino.columna][actual.indice_texto]:
+                dist[destino.fila][destino.columna][actual.indice_texto] = nueva_dist
+                Insertar Estado(destino.fila, destino.columna, actual.indice_texto, nueva_dist) en Q
+```
+
 ## 2.1. Modelado de Datos (Estructuras y Direcciones)
 
 En lugar de manejar variables sueltas, agrupamos la información en componentes limpios:

@@ -59,6 +59,147 @@ La restricción crítica de que dos equipos no pueden atender al mismo cliente s
 
 Usamos C++ para hacer esta implementacion:
 
+## Pseudo Codigo:
+
+
+1. Estructura de Datos (El componente básico)
+
+```
+Estructura Arista:
+    nodo_destino  // Hacia dónde va la tubería
+    capacidad     // Flujo máximo permitido
+    flujo         // Flujo actual (inicia en 0)
+    costo         // Costo por unidad de flujo
+    indice_rev    // Posición de la arista inversa en el nodo destino
+```
+
+2. Algoritmo de Búsqueda: Dijkstra con Potenciales
+
+```
+Función Dijkstra(Grafo, origen, destino, potenciales, distancias, padres_nodo, padres_arista):
+    Llenar el arreglo 'distancias' con INFINITO
+    distancias[origen] = 0
+    
+    Crear ColaPrioridad 'pq' (Min-Heap que guarda pares de: costo_acumulado, nodo)
+    Insertar (0, origen) en 'pq'
+    
+    Mientras 'pq' no esté vacía:
+        Sacar el nodo 'u' con la menor 'distancia_actual'
+        
+        Si 'distancia_actual' > distancias[u], continuar al siguiente ciclo
+        
+        Para cada 'Arista' en Grafo.lista_adyacencia[u]:
+            Si (Arista.capacidad - Arista.flujo) > 0:  // ¿Hay espacio libre?
+                // Calcular costo ajustado usando potenciales de Johnson
+                costo_reducido = Arista.costo + potenciales[u] - potenciales[Arista.nodo_destino]
+                
+                Si distancias[Arista.nodo_destino] > distancias[u] + costo_reducido:
+                    distancias[Arista.nodo_destino] = distancias[u] + costo_reducido
+                    padres_nodo[Arista.nodo_destino] = u
+                    padres_arista[Arista.nodo_destino] = índice de esta Arista
+                    Insertar (distancias[Arista.nodo_destino], Arista.nodo_destino) en 'pq'
+                    
+    Retornar (distancias[destino] != INFINITO) // Retorna verdadero si logró llegar al destino
+```
+
+3. Algoritmo Principal de Flujo: Min-Cost Max-Flow (solve)
+
+```
+Función ResolverMCMF(Grafo, origen, destino):
+    flujo_maximo = 0
+    costo_minimo = 0
+    Llenar arreglo 'potenciales' con 0
+    
+    // Ejecutar mientras Dijkstra encuentre un camino libre
+    Mientras Dijkstra(Grafo, origen, destino, potenciales, distancias, padres_nodo, padres_arista) sea Verdadero:
+        
+        // 1. Actualizar los potenciales para la siguiente ronda
+        Para cada nodo 'i' en el Grafo:
+            Si distancias[i] != INFINITO:
+                potenciales[i] = potenciales[i] + distancias[i]
+        
+        // 2. Encontrar el cuello de botella (flujo que podemos mandar)
+        flujo_camino = INFINITO
+        nodo_actual = destino
+        Mientras nodo_actual != origen:
+            padre = padres_nodo[nodo_actual]
+            idx_arista = padres_arista[nodo_actual]
+            arista = Grafo.lista_adyacencia[padre][idx_arista]
+            
+            flujo_camino = Minimo(flujo_camino, arista.capacidad - arista.flujo)
+            nodo_actual = padre
+            
+        // 3. Aplicar el flujo en el camino y cobrar el costo
+        nodo_actual = destino
+        Mientras nodo_actual != origen:
+            padre = padres_nodo[nodo_actual]
+            idx_arista = padres_arista[nodo_actual]
+            
+            // Aumentar flujo en camino real
+            Grafo.lista_adyacencia[padre][idx_arista].flujo += flujo_camino
+            
+            // Restar flujo en camino inverso (abre capacidad residual de retorno)
+            idx_rev = Grafo.lista_adyacencia[padre][idx_arista].indice_rev
+            Grafo.lista_adyacencia[nodo_actual][idx_rev].flujo -= flujo_camino
+            
+            // Cobrar costo real de esta tubería
+            costo_minimo = costo_minimo + (flujo_camino * Grafo.lista_adyacencia[padre][idx_arista].costo)
+            
+            nodo_actual = padre
+            
+        flujo_maximo = flujo_maximo + flujo_camino
+        
+    Retornar costo_minimo
+```
+
+4. Construcción del Grafo (Main)
+
+```
+Función Principal():
+    Leer N (clientes), K (equipos)
+    
+    // Mapeo e Inicialización de Nodos
+    origen = 0
+    sede_salida = 1
+    total_nodos = 2 * N + 3
+    destino = total_nodos - 1
+    Inicializar Grafo con 'total_nodos'
+    
+    // Conectar equipos totales desde el origen
+    AgregarArista(Grafo, desde: origen, hacia: sede_salida, capacidad: K, costo: 0)
+    
+    // Leer y conectar costos desde la Sede Central a cada cliente
+    Para i desde 1 hasta N:
+        Leer costo_sede
+        AgregarArista(Grafo, desde: sede_salida, hacia: (1 + i), capacidad: 1, costo: costo_sede)
+        
+    // Leer y conectar transiciones entre clientes en orden cronológico (i < j)
+    Para i desde 1 hasta N - 1:
+        Para j desde i + 1 hasta N:
+            Leer costo_transicion
+            AgregarArista(Grafo, desde: (N + 1 + i), hacia: (1 + j), capacidad: 1, costo: costo_transicion)
+            
+    // Conexiones estructurales de cobertura y reabastecimiento virtual
+    Para i desde 1 hasta N:
+        nodo_entrada = 1 + i
+        nodo_salida = N + 1 + i
+        
+        // Obliga a que el cliente 'i' sea visitado para poder llegar al destino
+        AgregarArista(Grafo, desde: nodo_entrada, hacia: destino, capacidad: 1, costo: 0)
+        
+        // Inyecta flujo virtual para continuar rutas disjuntas
+        AgregarArista(Grafo, desde: origen, hacia: nodo_salida, capacidad: 1, costo: 0)
+        
+    // Resolver y mostrar la respuesta
+    resultado_costo = ResolverMCMF(Grafo, origen, destino)
+    Imprimir resultado_costo
+
+Función AgregarArista(Grafo, desde, hacia, capacidad, costo):
+    // Arista Real
+    Añadir a Grafo.lista_adyacencia[desde] -> (nodo_destino: hacia, capacidad: capacidad, flujo: 0, costo: costo, indice_rev: tamaño actual de lista[hacia])
+    // Arista Inversa
+    Añadir a Grafo.lista_adyacencia[hacia] -> (nodo_destino: desde, capacidad: 0, flujo: 0, costo: -costo, indice_rev: tamaño actual de lista[desde] - 1)
+```
 
 ## 3.1. Las Estructuras en Memoria (struct Edge y class MinCostMaxFlow)
 

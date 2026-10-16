@@ -285,6 +285,45 @@ Este algoritmo es que se ejecuta en tiempo lineal, es decir, el número de opera
 
 # 1.2.2. Implementacion del Algortimo de Kadane (Programacion Dinamica):
 
+### Pseudo Codigo del algoritmo:
+
+```
+ALGORITMO AmalgamatedArtichokesDP
+ENTRADA: p, a, b, c, d, n (parámetros de la serie de tiempo)
+SALIDA: max_caida_global (el mayor declive de precio encontrado)
+
+INICIO
+    // Calcular el precio base del Día 1
+    precio_anterior ← p * ( sin(a * 1 + b) + cos(c * 1 + d) + 2.0 )
+    
+    // Inicializar los estados de la Programación Dinámica
+    dp_caida_actual ← 0.0   // Caída acumulada que termina exactamente en el día actual
+    max_caida_global ← 0.0  // Almacena el récord de la peor caída encontrada
+
+    // Llenar la "tabla" de estados de forma incremental (Día 2 hasta n)
+    PARA i DESDE 2 HASTA n CON PASO 1 HACER
+        // Calcular precio del día actual
+        precio_actual ← p * ( sin(a * i + b) + cos(c * i + d) + 2.0 )
+        
+        // Medir el cambio de precio de ayer a hoy (pérdida de valor)
+        cambio ← precio_anterior - precio_actual
+        
+        // Ecuación de recurrencia DP:
+        // Acumula la pérdida de hoy a la caída anterior. Si el precio sube 
+        // demasiado y el resultado se vuelve negativo, la caída se reinicia a 0.
+        dp_caida_actual ← MAXIMO(0.0, dp_caida_actual + cambio)
+        
+        // Mantener registro de la caída más grande vista en todo el viaje
+        max_caida_global ← MAXIMO(max_caida_global, dp_caida_actual)
+        
+        // El precio de hoy pasa a ser el de ayer para el siguiente paso
+        precio_anterior ← precio_actual
+    FIN_PARA
+
+    DEVOLVER max_caida_global
+FIN
+```
+
 El problema nos pide escribir un programa para determinar la mayor caida de precios en una secuencia de precios. Ademas, Fatima ha realizado analisis previos y llego a la conclusion de que la ecuacion:
 
 $price(k)= p \ · (sin(a \ · k + b) + cos(c \ · k + d) + 2)$

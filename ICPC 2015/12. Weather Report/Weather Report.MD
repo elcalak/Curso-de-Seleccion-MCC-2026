@@ -42,6 +42,92 @@ Dado que en cada paso combinamos de manera masiva los nodos repetidos, el tamañ
 
 # 2. Implementacion:
 
+## Pesudo Codigo:
+
+```
+Algoritmo WeatherReportHuffman
+    Input: 
+        n : Entero (longitud de las cadenas)
+        P_S, P_C, P_R, P_F : Reales (probabilidades de cada clima)
+    Output:
+        longitud_esperada : Real
+
+    // Paso 1: Precomputar factoriales para los coeficientes multinomiales
+    fact <- Arreglo de tamaño (n + 1) inicializado en 1
+    Para i desde 2 hasta n hacer:
+        fact[i] <- fact[i - 1] * i
+    Fin Para
+
+    // Cola de prioridad que ordena de MENOR a MAYOR probabilidad
+    // Cada elemento almacena un par: <probabilidad, conteo>
+    ColaMinima pq 
+
+    // Paso 2: Agrupación combinatoria por clases de frecuencia
+    Para fS desde 0 hasta n hacer:
+        Para fC desde 0 hasta (n - fS) hacer:
+            Para fR desde 0 hasta (n - fS - fC) hacer:
+                fF <- n - fS - fC - fR
+
+                // Calcular probabilidad de una sola cadena de este grupo
+                prob_actual <- (P_S^fS) * (P_C^fC) * (P_R^fR) * (P_F^fF)
+
+                // Calcular cuántas cadenas tienen esta distribución exacta
+                conteo_cadenas <- fact[n] / (fact[fS] * fact[fC] * fact[fR] * fact[fF])
+
+                Si conteo_cadenas > 0 Entonces:
+                    Insertar <prob_actual, conteo_cadenas> en pq
+                Fin Si
+            Fin Para
+        Fin Para
+    Fin Para
+
+    longitud_esperada <- 0.0
+
+    // Paso 3: Simulación de Huffman optimizada (Run-Length)
+    Mientras pq no esté vacía hacer:
+        actual <- ExtraerMinimo(pq)
+
+        // Condición de parada: Solo queda la raíz del árbol de Huffman
+        Si pq está vacía Y actual.conteo == 1 Entonces:
+            Terminar Bucle
+        Fin Si
+
+        // Caso A: Emparejar nodos idénticos dentro del mismo lote
+        Si actual.conteo > 1 Entonces:
+            parejas <- actual.conteo / 2
+            nueva_prob <- actual.prob * 2.0
+            
+            // Sumar al costo el peso de los nuevos nodos internos formados
+            longitud_esperada <- longitud_esperada + (nueva_prob * parejas)
+            
+            Insertar <nueva_prob, parejas> en pq
+            actual.conteo <- actual.conteo % 2 // Residuo huérfano (0 o 1)
+        Fin Si
+
+        // Caso B: Resolver el nodo huérfano (impar)
+        Si actual.conteo == 1 Entonces:
+            Si pq está vacía Entonces:
+                Terminar Bucle
+            Fin Si
+
+            siguiente_lote <- ExtraerMinimo(pq)
+
+            // Fusionar el huérfano con EXACTAMENTE 1 nodo del siguiente lote más pequeño
+            prob_combinada <- actual.prob + siguiente_lote.prob
+            longitud_esperada <- longitud_esperada + prob_combinada
+            
+            Insertar <prob_combinada, 1> en pq
+
+            // Si al lote vecino le quedaban más nodos, devolver el sobrante a la cola
+            Si siguiente_lote.conteo > 1 Entonces:
+                Insertar <siguiente_lote.prob, siguiente_lote.conteo - 1> en pq
+            Fin Si
+        Fin Si
+    Fin Mientras
+
+    Retornar longitud_esperada
+Fin Algoritmo
+```
 
 ## 2.1. Cabeceras, Configuración y Estructura del Nodo
 

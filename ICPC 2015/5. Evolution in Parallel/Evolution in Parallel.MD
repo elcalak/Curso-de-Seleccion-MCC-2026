@@ -34,6 +34,87 @@ Dado que realizarás muchas comprobaciones de subsecuencias, puedes implementar 
 
 # 2. Implementacion:
 
+## Pseudo Codigo:
+
+```
+Función EsSubsecuencia(cadena_grande, cadena_corta)
+    Si Longitud(cadena_corta) > Longitud(cadena_grande) Entonces
+        Devolver Falso
+    Fin Si
+    
+    i = 0, j = 0
+    Mientras i < Longitud(cadena_grande) Y j < Longitud(cadena_corta) Hacer
+        Si cadena_grande[i] == cadena_corta[j] Entonces
+            j = j + 1
+        Fin Si
+        i = i + 1
+    Fin Mientras
+    
+    Devolver (j == Longitud(cadena_corta))
+Fin Función
+
+Algoritmo EvolutionInParallel
+    Leer n
+    Leer raiz
+    Leer lista_DNA  // Contiene las n mutaciones intermedias
+    
+    // Paso 1: Ordenamiento Greedy
+    Ordenar lista_DNA de mayor a menor longitud
+    
+    // Paso 2: Filtro de seguridad inicial
+    Para cada cadena en lista_DNA Hacer
+        Si NO EsSubsecuencia(raiz, cadena) Entonces
+            Imprimir "impossible"
+            Terminar Programa
+        Fin Si
+    Fin Para
+    
+    // Paso 3: Inicializar las dos ramas evolutivas desde el ancestro común
+    camino1 = ListaVacía()
+    camino2 = ListaVacía()
+    ultimo1 = raiz
+    ultimo2 = raiz
+    
+    // Paso 4: Clasificación voraz de las mutaciones
+    Para cada cadena en lista_DNA Hacer
+        cabe_en_1 = EsSubsecuencia(ultimo1, cadena)
+        cabe_en_2 = EsSubsecuencia(ultimo2, cadena)
+        
+        Si NO cabe_en_1 Y NO cabe_en_2 Entonces
+            Imprimir "impossible"
+            Terminar Programa
+            
+        Sino Si cabe_en_1 Y NO cabe_en_2 Entonces
+            Agregar cadena al final de camino1
+            ultimo1 = cadena
+            
+        Sino Si NO cabe_en_1 Y cabe_en_2 Entonces
+            Agregar cadena al final de camino2
+            ultimo2 = cadena
+            
+        Sino // Caso Crítico: Cabe en ambas ramas
+            // Justificación: Si el extremo 2 está contenido en el 1,
+            // el camino 1 es el más amplio; protegemos su flexibilidad.
+            Si EsSubsecuencia(ultimo1, ultimo2) Entonces
+                Agregar cadena al final de camino2
+                ultimo2 = cadena
+            Sino
+                Agregar cadena al final de camino1
+                ultimo1 = cadena
+            Fin Si
+        Fin Si
+    Fin Para
+    
+    // Paso 5: Invertir para ordenar cronológicamente (de menor a mayor tamaño)
+    Invertir(camino1)
+    Invertir(camino2)
+    
+    // Paso 6: Despliegue de resultados según formato ICPC
+    Imprimir Longitud(camino1) + " " + Longitud(camino2)
+    Imprimir cada elemento de camino1
+    Imprimir cada elemento de camino2
+Fin Algoritmo
+```
 
 ## 2.1. El motor de búsqueda (is_subsequence)
 

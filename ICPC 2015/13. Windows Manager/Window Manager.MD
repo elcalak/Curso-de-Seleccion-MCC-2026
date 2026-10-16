@@ -51,8 +51,149 @@ Al mover primero las ventanas que están más cerca del destino final (las que v
 
 # 2. Implementacion:
 
+```
 
-1. Librerías y Estructura de Datos
+1. Estructuras de Datos y Estado Global
+
+Estructura Ventana:
+    id: Entero
+    x, y: Entero // Coordenadas esquina superior izquierda
+    w, h: Entero // Ancho y alto de la ventana
+
+Variables Globales:
+    ancho_pantalla, alto_pantalla: Entero
+    ListaVentanas: Lista de Ventana
+    contador_ventanas: Entero = 0
+
+2. Funciones Geométricas y de Validación
+
+text
+Funcion Interseccion(Ventana A, Ventana B) -> Booleano:
+    // Verifica superposición usando intervalos semiabiertos [x, x+w)
+    Si max(A.x, B.x) < min(A.x + A.w, B.x + B.w) Y 
+       max(A.y, B.y) < min(A.y + A.h, B.y + B.h) Entonces:
+        Retornar Verdadero
+    Sino:
+        Retornar Falso
+
+Funcion Es_Valida(Ventana nueva, Entero id_excluir) -> Booleano:
+    // Verificar bordes de la pantalla
+    Si nueva.x < 0 O nueva.y < 0 O 
+       (nueva.x + nueva.w) > ancho_pantalla O 
+       (nueva.y + nueva.h) > alto_pantalla Entonces:
+        Retornar Falso
+        
+    // Verificar colisiones con otras ventanas
+    Para cada w en ListaVentanas:
+        Si w.id != id_excluir Y Interseccion(nueva, w) Entonces:
+            Retornar Falso
+            
+    Retornar Verdadero
+
+Funcion Buscar_Ventana_En_Punto(Entero click_x, Entero click_y) -> Entero:
+    // Recorrer al revés para seleccionar la ventana que está arriba (Eje Z)
+    Para i desde longitud(ListaVentanas) - 1 hasta 0 con paso -1:
+        v = ListaVentanas[i]
+        Si click_x >= v.x Y click_x < v.x + v.w Y 
+           click_y >= v.y Y click_y < v.y + v.h Entonces:
+            Retornar i // Retorna el índice en la lista
+            
+    Retornar -1 // No se tocó ninguna ventana
+
+3. Operación Crítica: MOVE (Simulación Píxel a Píxel)
+
+Procedimiento Operacion_MOVE(Entero click_x, Entero click_y, Entero dx, Entero dy, Entero num_linea):
+    idx_inicial = Buscar_Ventana_En_Punto(click_x, click_y)
+    Si idx_inicial == -1 Entonces:
+        Imprimir "Command " + num_linea + ": MOVE - no window at given position"
+        Retornar
+
+    // Calcular distancia y direcciones unitarias (-1, 0, 1)
+    distancia_total = max(abs(dx), abs(dy))
+    dir_x = (dx > 0) ? 1 : ((dx < 0) ? -1 : 0)
+    dir_y = (dy > 0) ? 1 : ((dy < 0) ? -1 : 0)
+
+    GrupoMovil = [idx_inicial] // Lista de índices de ventanas arrastradas
+    unidades_movidas = 0
+
+    // Bucle para avanzar un píxel a la vez
+    Para paso desde 0 hasta distancia_total - 1:
+        // A. Verificar si alguna ventana del grupo choca con el borde físico del monitor
+        colision_borde = Falso
+        Para cada g en GrupoMovil:
+            Si dir_x > 0 Y ListaVentanas[g].x + ListaVentanas[g].w >= ancho_pantalla Entonces colision_borde = Verdadero
+            Si dir_x < 0 Y ListaVentanas[g].x <= 0 Entonces colision_borde = Verdadero
+            Si dir_y > 0 Y ListaVentanas[g].y + ListaVentanas[g].h >= alto_pantalla Entonces colision_borde = Verdadero
+            Si dir_y < 0 Y ListaVentanas[g].y <= 0 Entonces colision_borde = Verdadero
+
+        Si colision_borde Entonces:
+            Romper Bucle // Se congela el movimiento del bloque entero
+
+        // B. Proyectar el siguiente paso de forma virtual y capturar nuevos obstáculos
+        NuevosVecinos = []
+        Para cada g en GrupoMovil:
+            VentanaFantasma = ListaVentanas[g]
+            VentanaFantasma.x += dir_x
+            VentanaFantasma.y += dir_y
+
+            Para i desde 0 hasta longitud(ListaVentanas) - 1:
+                Si i esta en GrupoMovil O i esta en NuevosVecinos Entonces:
+                    Continuar // Ignorar si ya se mueve en este paso
+
+                Si Interseccion(VentanaFantasma, ListaVentanas[i]) Entonces:
+                    Agregar i a NuevosVecinos
+
+        // C. Efecto Dominó Iterativo: Si hay nuevos obstáculos, se absorben y se congela el avance
+        Si NuevosVecinos no esta vacio Entonces:
+            Para cada n en NuevosVecinos:
+                Agregar n a GrupoMovil
+            paso = paso - 1 // Deshacer el avance del ciclo para volver a evaluar el mismo píxel
+            Continuar
+
+        // D. Si el píxel está completamente libre, aplicar el desplazamiento físico real
+        Para cada g en GrupoMovil:
+            ListaVentanas[g].x += dir_x
+            ListaVentanas[g].y += dir_y
+            
+        unidades_movidas += 1
+
+    // Reportar si el movimiento fue truncado antes de lo solicitado
+    Si unidades_movidas < distancia_total Entonces:
+        Imprimir "Command " + num_linea + ": MOVE - moved " + unidades_movidas + " instead of " + distancia_total
+
+4. Algoritmo Principal (Procesamiento del Flujo)
+
+Procedimiento Principal():
+    Leer ancho_pantalla, alto_pantalla
+    num_linea = 1
+    
+    Mientras haya líneas de entrada disponibles:
+        Leer linea
+        Si linea esta vacia Entonces:
+            Romper Bucle // Fin del archivo o doble enter en consola
+            
+        num_linea += 1
+        Separar linea en componentes: comando, y sus argumentos numéricos
+        
+        Si comando == "OPEN" Entonces:
+            // Crear ventana temporal, validar con Es_Valida y meter a ListaVentanas
+            
+        Sino si comando == "CLOSE" Entonces:
+            // Buscar índice por clic y usar borrar() en ListaVentanas
+            
+        Sino si comando == "RESIZE" Entonces:
+            // Buscar índice, modificar dimensiones y guardar cambios si Es_Valida es verdadera
+            
+        Sino si comando == "MOVE" Entonces:
+            Operacion_MOVE(arg1, arg2, arg3, arg4, num_linea)
+
+    // Impresión del Reporte Final
+    Imprimir longitud(ListaVentanas) + " window(s):"
+    Para cada v en ListaVentanas:
+        Imprimir v.x + " " + v.y + " " + v.w + " " + v.h
+```
+
+## 2.1. Librerías y Estructura de Datos
 
 Esta sección inicial importa las herramientas de C++ y define cómo se almacena cada ventana en la memoria del gestor.
 ```C++

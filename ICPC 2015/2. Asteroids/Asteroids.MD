@@ -89,6 +89,169 @@ Si al recorrer los vértices pasamos de "adentro" a "afuera" (o viceversa), calc
 
 Usaremos C++ por la velocidad y legibilidad del codigo:
 
+## Pseudo Codigo de la implementacion:
+
+```
+ESTRUCTURA Punto:
+    x, y: Real
+
+ESTRUCTURA Asteroide:
+    vertices: Lista de Punto
+    vx, vy: Real
+
+// 1. Motor de viaje en el tiempo
+FUNCION mover_punto(p: Punto, vx: Real, vy: Real, t: Real) -> Punto:
+    RETORNAR Punto(p.x + vx * t, p.y + vy * t)
+
+// 2. Cálculo del área de una silueta (Fórmula de Shoelace)
+FUNCION calcular_area(poligono: Lista de Punto) -> Real:
+    n = longitud(poligono)
+    SI n < 3 ENTONCES RETORNAR 0.0
+    
+    suma = 0.0
+    PARA i DESDE 0 HASTA n - 1:
+        siguiente = (i + 1) MOD n
+        suma = suma + (poligono[i].x * poligono[siguiente].y) - (poligono[siguiente].x * poligono[i].y)
+        
+    RETORNAR ValorAbsoluto(suma) / 2.0
+
+// 3. Forzar orientación antihoraria para el algoritmo de recorte
+PROCEDIMIENTO asegurar_sentido_antihorario(VALOR_REF vertices: Lista de Punto):
+    n = longitud(vertices)
+    SI n < 3 ENTONCES RETORNAR
+    suma = 0.0
+    PARA i DESDE 0 HASTA n - 1:
+        s_idx = (i + 1) MOD n
+        suma = suma + (vertices[i].x * vertices[s_idx].y) - (vertices[s_idx].x * vertices[i].y)
+    SI suma < 0 ENTONCES:
+        Invertir_Orden_Lista(vertices)
+
+// 4. Algoritmo de Recorte (Sutherland-Hodgman) contra una línea infinita AB
+FUNCION recortar_poligono(poligono: Lista de Punto, a: Punto, b: Punto) -> Lista de Punto:
+    resultado = Nueva Lista Vacía
+    n = longitud(poligono)
+    SI n == 0 ENTONCES RETORNAR resultado
+
+    PARA i DESDE 0 HASTA n - 1:
+        p1 = poligono[i]
+        p2 = poligono[(i + 1) MOD n]
+
+        // Producto cruz para saber si el punto está a la izquierda (adentro >= 0) o derecha
+        cross1 = (b.x - a.x) * (p1.y - a.y) - (b.y - a.y) * (p1.x - a.x)
+        cross2 = (b.x - a.x) * (p2.y - a.y) - (b.y - a.y) * (p2.x - a.x)
+
+        SI cross1 >= -0.0000001 ENTONCES:
+            Añadir p1 a resultado
+            
+        // Si el segmento cruza la línea, calculamos el punto de intersección exacto
+        SI (cross1 > 0 E cross2 < 0) O (cross1 < 0 E cross2 > 0) ENTONCES:
+            t_proporcion = cross1 / (cross1 - cross2)
+            p_corte = Punto(p1.x + t_proporcion * (p2.x - p1.x), p1.y + t_proporcion * (p2.y - p1.y))
+            Añadir p_corte a resultado
+
+    RETORNAR resultado
+
+// 5. Medir el área de choque en el segundo t
+FUNCION obtener_area_interseccion(A1: Asteroide, A2: Asteroide, t: Real) -> Real:
+    // Clonar y mover las figuras al tiempo t
+    p1_temporal = Lista de puntos de A1 movidos al tiempo t con mover_punto()
+    p2_temporal = Lista de puntos de A2 movidos al tiempo t con mover_punto()
+
+    silueta_recortada = p1_temporal
+    m = longitud(p2_temporal)
+    
+    // Recortar sucesivamente contra cada lado de la segunda figura
+    PARA i DESDE 0 HASTA m - 1:
+        silueta_recortada = recortar_poligono(silueta_recortada, p2_temporal[i], p2_temporal[(i + 1) MOD m])
+        
+    RETORNAR calcular_area(silueta_recortada)
+
+// 6. Encontrar cuándo una esquina choca matemáticamente contra una pared
+PROCEDIMIENTO registrar_eventos_colision(p: Punto, vp: Vector, a: Punto, b: Punto, va: Vector, vb: Vector, VALOR_REF alarmas: Lista de Real):
+    // Se expande analíticamente el determinante algebraico (Det = 0)
+    // Esto genera una ecuación cuadrática de tiempo: c2*t^2 + c1*t + c0 = 0
+    Calcular coeficientes c2, c1, c0 basados en posiciones iniciales y velocidades relativas...
+
+    SI ValorAbsoluto(c2) < 0.000000001 ENTONCES:
+        SI ValorAbsoluto(c1) > 0.000000001 ENTONCES:
+            t = -c0 / c1
+            SI t >= 0 ENTONCES Añadir t a alarmas
+    SINO:
+        discriminante = c1*c1 - 4*c2*c0
+        SI discriminante >= 0 ENTONCES:
+            t1 = (-c1 + RaizCuadrada(discriminante)) / (2 * c2)
+            t2 = (-c1 - RaizCuadrada(discriminante)) / (2 * c2)
+            SI t1 >= 0 ENTONCES Añadir t1 a alarmas
+            SI t2 >= 0 ENTONCES Añadir t2 a alarmas
+
+// 7. Hilo Principal (Algoritmo de Barrido e Interpolación)
+ALGORITMO PRINCIPAL:
+    Leer datos de Asteroide A1 y Asteroide A2
+    asegurar_sentido_antihorario(A1.vertices)
+    asegurar_sentido_antihorario(A2.vertices)
+
+    alarmas = Lista Inicializada con [0.0]
+
+    // Generar todas las colisiones posibles (Vértices contra Aristas)
+    PARA cada vertice de A1 y cada arista de A2:
+        registrar_eventos_colision(vertice, arista, alarmas)
+    PARA cada vertice de A2 y cada arista de A1:
+        registrar_eventos_colision(vertice, arista, alarmas)
+
+    Ordenar alarmas cronológicamente de menor a mayor
+    Eliminar duplicados o tiempos extremadamente cercanos en alarmas
+    Añadir una alarma de seguridad final: (Ultima_Alarma + 10.0)
+
+    max_area = 0.0
+    tiempo_optimo = 0.0
+
+    // Analizar tramo por tramo usando parábolas
+    PARA i DESDE 0 HASTA longitud(alarmas) - 2:
+        t0 = alarmas[i]
+        t2 = alarmas[i+1]
+        t1 = (t0 + t2) / 2.0 // Punto medio
+
+        // Medir el área real en los tres puntos del intervalo
+        y0 = obtener_area_interseccion(A1, A2, t0)
+        y1 = obtener_area_interseccion(A1, A2, t1)
+        y2 = obtener_area_interseccion(A1, A2, t2)
+
+        // Actualizar récords con los extremos analizados
+        SI y0 > max_area ENTONCES: max_area = y0; tiempo_optimo = t0
+        SI y1 > max_area ENTONCES: max_area = y1; tiempo_optimo = t1
+        SI y2 > max_area ENTONCES: max_area = y2; tiempo_optimo = t2
+
+        // Interpolar parábola trasladando el intervalo a origen t0=0
+        Calcular coeficientes 'a' y 'b' de la parábola y = a*t^2 + b*t + c...
+        
+        SI a < -0.000000001 ENTONCES: // Si tiene un punto máximo arriba
+            t_vertice = -b / (2.0 * a) + t0 // Revertir traslado temporal
+            
+            SI t_vertice >= t0 E t_vertice <= t2 ENTONCES:
+                area_vertice = obtener_area_interseccion(A1, A2, t_vertice)
+                SI area_vertice > max_area ENTONCES:
+                    max_area = area_vertice
+                    tiempo_optimo = t_vertice
+
+    // Determinar la salida final
+    SI max_area > 0.0000001 ENTONCES:
+        Imprimir tiempo_optimo, max_area
+    SINO:
+        // Validación de contacto superficial para descartar el "never"
+        se_roza = Falso
+        tiempo_roce = 0.0
+        PARA cada t en alarmas:
+            SI la intersección en el tiempo t contiene puntos (aunque el área sea 0) ENTONCES:
+                se_roza = Verdadero
+                tiempo_roce = t
+                Terminar Bucle
+                
+        SI se_roza ENTONCES:
+            Imprimir tiempo_roce, 0.0
+        SINO:
+            Imprimir "never"
+```
+
 ## 2.1. Declaracion de constantes y bibliotecas:
 
 ```C++

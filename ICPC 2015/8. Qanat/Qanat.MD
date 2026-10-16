@@ -39,6 +39,56 @@ Donde $a$ es una constante que depende puramente de la pendiente inicial $m = h/
 
 # 2. Implementacion:
 
+## Pseudo Codigo:
+
+```
+ALGORITMO QanatMinimización
+    // Entrada: w (ancho), h (alto), n (número de pozos)
+    LEER w, h, n
+    
+    // Paso 0: Inicialización de variables geométricas
+    m ← h / w
+    a ← 2.0 / (m * m - 1.0)
+    
+    Crear arreglo c de tamaño (n + 1) e inicializar en 0.0
+    c[0] ← 0.0  // Caso base: el extremo izquierdo está fijo en el origen
+    
+    // Paso 1: Calcular los coeficientes de proporción (Izquierda a Derecha)
+    PARA i DESDE 1 HASTA n HACER:
+        c[i] ← -1.0 / (a + c[i - 1])
+    FIN PARA
+    
+    // Paso 2: Reconstruir posiciones absolutas (Derecha a Izquierda)
+    Crear arreglo x de tamaño (n + 2) e inicializar en 0.0
+    x[n + 1] ← w  // El límite derecho es el ancho total de la montaña
+    
+    PARA i DESDE n HASTA 1 CON PASO -1 HACER:
+        x[i] ← c[i] * x[i + 1]
+    FIN PARA
+    
+    // Paso 3: Calcular el costo mínimo acumulado por segmentos geométricos
+    costo_total ← 0.0
+    
+    PARA i DESDE 0 HASTA n HACER:
+        t1 ← (x[i + 1] * x[i + 1]) * (m * m + m) / 2.0
+        t2 ← (x[i] * x[i]) * m / 2.0
+        t3 ← (1.0 - m * m) * ((x[i + 1] - x[i]) * (x[i + 1] - x[i])) / 4.0
+        costo_total ← costo_total + (t1 - t2 + t3)
+    FIN PARA
+    
+    // Paso 4: Desplegar resultados con formato
+    IMPRIMIR costo_total con 6 decimales
+    
+    elementos_a_imprimir ← MINIMO(n, 10)
+    PARA i DESDE 1 HASTA elementos_a_imprimir HACER:
+        IMPRIMIR x[i] con 6 decimales
+    FIN PARA
+    IMPRIMIR nueva_línea
+    
+FIN ALGORITMO
+```
+## Implementacion en C++
+
 ```C++
 #include <iostream>
 #include <vector>

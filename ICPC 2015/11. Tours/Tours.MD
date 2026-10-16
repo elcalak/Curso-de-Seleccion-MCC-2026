@@ -43,6 +43,81 @@ La respuesta final serán todos los divisores del MCD acumulado calculados a par
 Aquí tienes la implementación completa en C++ para resolver el Problema K: Tours.
 Esta solución procesa el grafo usando una Búsqueda en Profundidad (DFS) para encontrar los ciclos fundamentales. Al mismo tiempo, calcula recursivamente el Máximo Común Divisor (MCD) global de las longitudes de todos los ciclos del grafo utilizando std::gcd.
 
+## Pseudo Codigo:
+
+```
+
+Estructuras de Datos Globales
+
+MAXN = 2005
+adj = Arreglo de listas de adyacencia de tamaño MAXN (guarda pares de: nodo_destino, id_arista)
+depth = Arreglo de enteros de tamaño MAXN inicializado en 0
+visited = Arreglo de booleanos de tamaño MAXN inicializado en Falso
+g_gcd = Entero largo inicializado en 0
+
+Algoritmo 1: Búsqueda en Profundidad (dfs)
+
+Entrada: u (nodo actual), p_edge_id (ID de la arista padre), d (profundidad actual)
+
+Función dfs(u, p_edge_id, d):
+    visited[u] = Verdadero
+    depth[u] = d
+
+    Para cada (vecino, id_arista) en adj[u]:
+        // Si es la misma arista física por la que entramos, la ignoramos
+        Si id_arista == p_edge_id entonces:
+            Continuar al siguiente vecino
+
+        Si visited[vecino] es Verdadero entonces:
+            // Se detectó un ciclo. Calculamos solo desde el nodo más profundo
+            Si depth[u] > depth[vecino] entonces:
+                longitud_ciclo = depth[u] - depth[vecino] + 1
+                g_gcd = Calcular_MCD(g_gcd, longitud_ciclo)
+        Sino:
+            // Nodo no visitado, continuar la exploración en profundidad
+            dfs(vecino, id_arista, d + 1)
+
+Algoritmo 2: Función Principal (main)
+
+Entrada: N (número de nodos), M (número de aristas), seguido de M pares de conexiones (u, v)
+text
+Función Principal():
+    Leer N, M
+    
+    Para i desde 0 hasta M - 1:
+        Leer u, v
+        // Ajustar indexación a 0 si el problema viene indexado en 1
+        u = u - 1
+        v = v - 1
+        Agregar (v, i) a la lista adj[u]
+        Agregar (u, i) a la lista adj[v]
+
+    // Inicializar estado global
+    g_gcd = 0
+    Llenar visited con Falso
+
+    // Explorar todas las componentes conexas del grafo
+    Para i desde 0 hasta N - 1:
+        Si visited[i] es Falso entonces:
+            dfs(i, -1, 1) // -1 indica que la raíz no tiene arista padre
+
+    // Si el MCD es 0, el grafo no tiene ciclos
+    Si g_gcd == 0 entonces:
+        Terminar Programa
+
+    // Encontrar divisores usando optimización de raíz cuadrada
+    divisores = Conjunto vacío (mantiene elementos únicos y ordenados automáticamente)
+    
+    Para i desde 1 hasta raíz_cuadrada(g_gcd):
+        Si g_gcd mod i == 0 entonces:
+            Insertar i en divisores
+            Insertar (g_gcd / i) en divisores
+
+    // Imprimir el resultado final
+    Imprimir todos los elementos de divisores separados por espacio
+    Terminar Programa
+```
+
 ## 2.1. Inclusión de Librerías y Configuración Inicial
 
 ```C++
