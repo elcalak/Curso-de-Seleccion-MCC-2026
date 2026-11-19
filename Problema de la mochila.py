@@ -87,14 +87,14 @@ def bak_pak(P, V, W, n, memo=None): #Inicializa la funcion con los parametros: P
 
 
 # 3. Prueba del programa
-P = [2, 3, 4, 5]          # Pesos
-V = [3, 4, 5, 6]          # Valores
-W = 5                     # Capacidad máxima
-n = 4                     # Cantidad de objetos
+P = [2, 3, 4, 5] # Pesos
+V = [3, 4, 5, 6] # Valores
+W = 5 # Capacidad máxima
+n = 4 # Cantidad de objetos
 
-A = lb(n)                 # [0, 1, 2, 3]
-S = power_set(A)          # Todos los subconjuntos
-S_validos = res(S, P, W)  # Subconjuntos que caben en la mochila
+A = lb(n) # [0, 1, 2, 3]
+S = power_set(A) # Todos los subconjuntos
+S_validos = res(S, P, W) # Subconjuntos que caben en la mochila
 solucion = mv(S_validos, V)
 
 solucion_pd = bak_pak(P, V, W, n)
